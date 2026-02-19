@@ -6,6 +6,7 @@ import "./app.css";
 
 const audioState = { ctx: null, nodes: [] };
 const PLAYBACK_OFFSET_SEC = 0.12;
+const MIN_NOTE_SEC = 0.02;
 const VEROVIO_SCRIPT_SRC = "https://www.verovio.org/javascript/latest/verovio-toolkit-wasm.js";
 
 function stopAudio() {
@@ -39,7 +40,11 @@ function schedulePlayback(notes, audioCtx, offsetSec) {
 
   for (const note of playableNotes) {
     const start = playbackStartSec + note.startSec;
-    const end = playbackStartSec + note.endSec;
+    const durationSec = Math.max(note.durationSec || 0, MIN_NOTE_SEC);
+    const end = start + durationSec;
+    const attackEnd = Math.min(start + 0.02, end - 0.001);
+
+    if (!(end > start + 0.001)) continue;
 
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -47,7 +52,11 @@ function schedulePlayback(notes, audioCtx, offsetSec) {
     osc.frequency.setValueAtTime(midiToFrequency(note.midi), start);
 
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.24, start + 0.02);
+    if (attackEnd > start + 0.0005) {
+      gain.gain.exponentialRampToValueAtTime(0.24, attackEnd);
+    } else {
+      gain.gain.setValueAtTime(0.24, start + 0.001);
+    }
     gain.gain.exponentialRampToValueAtTime(0.0001, end);
 
     osc.connect(gain);
@@ -123,8 +132,38 @@ function ensureVerovioScript() {
   });
 }
 
+function waitForVerovioRuntime(timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const poll = () => {
+      const vrv = window.verovio;
+      if (vrv?.toolkit) {
+        const mod = vrv.module;
+        if (!mod || mod.runtimeInitialized || mod.calledRun) {
+          resolve(vrv);
+          return;
+        }
+        const prev = mod.onRuntimeInitialized;
+        mod.onRuntimeInitialized = () => {
+          if (typeof prev === "function") prev();
+          resolve(vrv);
+        };
+        return;
+      }
+
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error("Verovio 런타임 초기화 실패"));
+        return;
+      }
+      setTimeout(poll, 60);
+    };
+    poll();
+  });
+}
+
 async function ensureVerovioToolkit(toolkitRef) {
-  const verovio = await ensureVerovioScript();
+  await ensureVerovioScript();
+  const verovio = await waitForVerovioRuntime();
   if (!verovio?.toolkit) {
     throw new Error("Verovio toolkit을 사용할 수 없습니다.");
   }
