@@ -1,0 +1,59 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  background: #f6f7fb;
+  color: #1e2430;
+}
+
+#app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #d4d8e5;
+  background: #ffffff;
+}
+
+.toolbar select,
+.toolbar button {
+  height: 34px;
+  border: 1px solid #c5cad9;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+}
+
+.toolbar button {
+  cursor: pointer;
+}
+
+.status {
+  color: #5a6277;
+  font-size: 13px;
+  margin-left: auto;
+}
+
+.sheet-wrap {
+  overflow: auto;
+  padding: 12px;
+}
+
+.sheet {
+  background: #fff;
+  border: 1px solid #d4d8e5;
+  border-radius: 10px;
+  padding: 12px;
+  min-height: 200px;
+}
